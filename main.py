@@ -20,14 +20,15 @@ class Canvas(QLabel):
         super().__init__()
 
         # Define the canvas
-        canvas = QPixmap(600, 300)
-        canvas.fill(Qt.GlobalColor.white)                           # Set canvas background colour to white
-        self.setPixmap(canvas)                                      # Set the pixmap of the QLabel as the created Pixmap canvas
+        self.canvas = QPixmap(600, 300)
+        self.canvas.fill(Qt.GlobalColor.white)                           # Set canvas background colour to white
+        self.setPixmap(self.canvas)                                      # Set the pixmap of the QLabel as the created Pixmap canvas
         self.setMouseTracking(True)                                 # Mouse position is always registerd whether clicking or not
 
         self.num_f_points = 1
         self.points_placed = 0
         self.mouse_x, self.mouse_y = 0, 0                           # Initialise mouse position
+        self.focal_points = []
 
     # Update the "global"(? at class level) mouse position
     # With current mouse position
@@ -37,27 +38,64 @@ class Canvas(QLabel):
 
     # Place a focal point
     def plotPoint(self):
-        canvas = self.pixmap()
-        painter = QPainter(canvas)
-        pen = painter.pen()
-        pen.setWidth(5)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)                    # Circular points
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)     # Antialiasing
-        painter.setPen(pen)
-        painter.drawPoint(int(self.mouse_x), int(self.mouse_y))
-        painter.end()
-        self.setPixmap(canvas)
+
+        
+        mouse_x, mouse_y = (self.mouse_x), int(self.mouse_y)
+        focal_point = FocalPoint(len(self.focal_points))
+        focal_point.setPosition(mouse_x, mouse_y)
+        self.focal_points.append(focal_point)
+        self.redrawCanvas()
+
+
+    def draw_lines(self):
+        pass
 
     # Register Mouse Clicks
     def mousePressEvent(self, ev):
 
         # When left button is clicked
         if ev.button() == Qt.MouseButton.LeftButton and self.points_placed < self.num_f_points:
-            print(f"Mouse Position: {self.mouse_x}, {self.mouse_y}")
+            # print(f"Mouse Position: {self.mouse_x}, {self.mouse_y}")
             
             # Plot a point at that position
             self.plotPoint()
             self.points_placed += 1
+
+    def redrawCanvas(self):
+        self.canvas.fill(Qt.GlobalColor.white) 
+
+        painter = QPainter(self.canvas)
+        pen = painter.pen()
+        pen.setWidth(5)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)                    # Circular points
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)     # Antialiasing
+        painter.setPen(pen)
+
+        
+        for point in self.focal_points:
+            painter.drawPoint(point.position_x, point.position_y)
+
+        painter.end()
+        self.setPixmap(self.canvas)
+
+
+    def removeExcessPoints(self):
+        # While loop over if statement
+        # Handles cases where slider moves to quickly/misses updates
+        # More robust
+        while len(self.focal_points) > self.num_f_points:
+            self.focal_points.pop()
+            self.points_placed = max(0, self.points_placed - 1)
+        self.redrawCanvas()
+
+
+class FocalPoint():
+    def __init__(self, focal_point_index):
+        self.focal_point_index = focal_point_index
+        self.position_x, self.position_y = 0, 0
+
+    def setPosition(self, position_x, position_y):
+        self.position_x, self.position_y = position_x, position_y
 
 
 class NumFPointControl(QWidget):
@@ -81,8 +119,9 @@ class NumFPointControl(QWidget):
     
     def updateNumFPoints(self, value):
         self.canvas.num_f_points = value
+        self.canvas.removeExcessPoints()
         self.f_point_label.setText(f"Num F-Points: {value}")
-        print(f"Updated num_f_points to: {value}")
+        # print(f"Updated num_f_points to: {value}")
 
 
 # Main window class
