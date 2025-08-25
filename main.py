@@ -1,7 +1,7 @@
 import sys
 
-from PyQt6.QtGui import QPixmap, QPainter
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QPixmap, QPainter, QPen
+from PyQt6.QtCore import Qt, QPointF
 from PyQt6.QtWidgets import (
     QApplication, 
     QMainWindow,
@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QSlider,
     QVBoxLayout
 )
+import numpy as np
 
 
 # Main view area for perspective grid view
@@ -21,13 +22,13 @@ class Canvas(QLabel):
 
         # Define the canvas
         self.canvas = QPixmap(600, 300)
-        self.canvas.fill(Qt.GlobalColor.white)                           # Set canvas background colour to white
-        self.setPixmap(self.canvas)                                      # Set the pixmap of the QLabel as the created Pixmap canvas
-        self.setMouseTracking(True)                                 # Mouse position is always registerd whether clicking or not
+        self.canvas.fill(Qt.GlobalColor.white)                        
+        self.setPixmap(self.canvas)                                   
+        self.setMouseTracking(True)                
 
         self.num_f_points = 1
         self.points_placed = 0
-        self.mouse_x, self.mouse_y = 0, 0                           # Initialise mouse position
+        self.mouse_x, self.mouse_y = 0, 0                          
         self.focal_points = []
 
     # Update the "global"(? at class level) mouse position
@@ -38,8 +39,6 @@ class Canvas(QLabel):
 
     # Place a focal point
     def plotPoint(self):
-
-        
         mouse_x, mouse_y = (self.mouse_x), int(self.mouse_y)
         focal_point = FocalPoint(len(self.focal_points))
         focal_point.setPosition(mouse_x, mouse_y)
@@ -61,24 +60,6 @@ class Canvas(QLabel):
             self.plotPoint()
             self.points_placed += 1
 
-    def redrawCanvas(self):
-        self.canvas.fill(Qt.GlobalColor.white) 
-
-        painter = QPainter(self.canvas)
-        pen = painter.pen()
-        pen.setWidth(5)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)                    # Circular points
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)     # Antialiasing
-        painter.setPen(pen)
-
-        
-        for point in self.focal_points:
-            painter.drawPoint(point.position_x, point.position_y)
-
-        painter.end()
-        self.setPixmap(self.canvas)
-
-
     def removeExcessPoints(self):
         # While loop over if statement
         # Handles cases where slider moves to quickly/misses updates
@@ -87,6 +68,37 @@ class Canvas(QLabel):
             self.focal_points.pop()
             self.points_placed = max(0, self.points_placed - 1)
         self.redrawCanvas()
+
+    def redrawCanvas(self):
+        self.canvas.fill(Qt.GlobalColor.white) 
+
+        painter = QPainter(self.canvas)
+        pen = QPen(Qt.GlobalColor.black, 1)
+
+        painter.setPen(pen)
+        painter.setBrush(Qt.GlobalColor.black)                                               
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)     
+        
+        # Should move these into canvas initialisation?
+        focal_point_radius = 1
+        f_p_line_length = 100
+        theta_vals = np.linspace(0, 2*np.pi, 9)[:-1]
+        x = f_p_line_length * np.cos(theta_vals)
+        y = f_p_line_length * np.sin(theta_vals)
+
+        for point in self.focal_points:
+            painter.drawEllipse(point.position_x - focal_point_radius,
+                                point.position_y - focal_point_radius,
+                                2 * focal_point_radius,
+                                2 * focal_point_radius)
+            
+            for x_i, y_i in zip(x, y):
+                start_point = QPointF(point.position_x, point.position_y)
+                end_point = QPointF(point.position_x + x_i, point.position_y + y_i)
+                painter.drawLine(start_point, end_point)
+
+        painter.end()
+        self.setPixmap(self.canvas)
 
 
 class FocalPoint():
@@ -121,7 +133,6 @@ class NumFPointControl(QWidget):
         self.canvas.num_f_points = value
         self.canvas.removeExcessPoints()
         self.f_point_label.setText(f"Num F-Points: {value}")
-        # print(f"Updated num_f_points to: {value}")
 
 
 # Main window class
