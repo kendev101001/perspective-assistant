@@ -13,6 +13,7 @@ class Canvas(QLabel):
 
         # Define the canvas
         self.canvas = QPixmap(600, 300)
+        self.canvas.setDevicePixelRatio(self.devicePixelRatio())        # Use DPI system, need to look into this
         self.canvas.fill(Qt.GlobalColor.white)                        
         self.setPixmap(self.canvas)                                   
         self.setMouseTracking(True)                
@@ -61,28 +62,43 @@ class Canvas(QLabel):
         self.redrawCanvas()
 
     def redrawCanvas(self):
+        # Set the background of the canvas to completely white
         self.canvas.fill(Qt.GlobalColor.white) 
 
+        # Initialise a new painter object
         painter = QPainter(self.canvas)
-        pen = QPen(Qt.GlobalColor.black, 1)
+
+        # Antialiasing settings
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)              # What exactly does this one do again??                                          
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.LosslessImageRendering, True)             # What exactly does this one do again??
+
+        # Pen settings
+        pen = QPen(Qt.GlobalColor.black, 1.0)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        pen.setCosmetic(True) #??
 
         painter.setPen(pen)
-        painter.setBrush(Qt.GlobalColor.black)     
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)                                          
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)     
+        painter.setBrush(Qt.GlobalColor.black)          
         
         # Should move these into canvas initialisation?
-        focal_point_radius = 5
-        f_p_line_length = 100
+        focal_point_radius = 5.0
+        f_p_line_length = 100.0
         theta_vals = np.linspace(0, 2*np.pi, 9)[:-1]
         x = f_p_line_length * np.cos(theta_vals)
         y = f_p_line_length * np.sin(theta_vals)
 
         for point in self.focal_points:
-            painter.drawEllipse(point.position_x - focal_point_radius,
-                                point.position_y - focal_point_radius,
-                                2 * focal_point_radius,
-                                2 * focal_point_radius)
+
+            # Use floats
+            center_x = float(point.position_x)
+            center_y = float(point.position_y)
+            point_position = QPointF(center_x, center_y)
+
+            # Draw with floating point precision
+            painter.drawEllipse(point_position, focal_point_radius, focal_point_radius)
             
             for x_i, y_i in zip(x, y):
                 start_point = QPointF(point.position_x, point.position_y)
