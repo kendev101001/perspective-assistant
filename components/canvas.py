@@ -85,7 +85,7 @@ class Canvas(QLabel):
         
         # Should move these into canvas initialisation?
         focal_point_radius = 5.0
-        f_p_line_length = 100.0
+        f_p_line_length = 1000.0
         theta_vals = np.linspace(0, 2*np.pi, 9)[:-1]
         x = f_p_line_length * np.cos(theta_vals)
         y = f_p_line_length * np.sin(theta_vals)
